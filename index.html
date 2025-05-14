@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Media Uploader</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #121212;
+      color: white;
+      padding-bottom: 90px; 
+    
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    #topSection {
+      padding: 20px;
+      text-align: center;
+      background-color: #121212;
+    }
+
+    #uploadForm {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    input[type="text"] {
+      width: 200px;
+      padding: 8px;
+      background-color: #333;
+      border: 1px solid #535353;
+      color: white;
+      border-radius: 4px;
+    }
+
+    input[type="file"] {
+      color: white;
+    }
+
+    #contentWrapper {
+      display: flex;
+      flex: 1;
+    }
+
+    #bottomSection {
+      background-color: #181818;
+      padding: 20px;
+      flex: 1;
+      min-width: 0; /
+    }
+    
+    #fileList > div {
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+        
+    #largeArtworkSection {
+      width: 350px;
+      min-width: 350px; 
+      background-color: #181818;
+      padding: 20px;
+      display: none; 
+      border-left: 1px solid #333;
+    }
+    
+    #largeArtworkSection.visible {
+      display: block;
+    }
+    
+    #largeArtwork {
+      width: 100%;
+      height: 350px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    
+    #emptySongMessage {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+    
+    #largeSongName {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+    
+    #largeArtistName {
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 20px;
+    }
+
+    button {
+      cursor: pointer;
+      background-color: #1db954;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 30px;
+      font-weight: bold;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #1ed760;
+    }
+
+    /* Player bar styles */
+    #playerBar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 100px;
+      background-color: #282828;
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      z-index: 1000;
+      justify-content: space-between;
+    }
+
+    #playerBar.hidden {
+      display: none;
+    }
+
+    #playerLeftSide {
+      display: flex;
+      align-items: center;
+      width: 30%;
+      min-width: 180px;
+    }
+
+    #playerCenter {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #playerControls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 8px;
+    }
+
+    #playerRightSide {
+      display: flex;
+      align-items: center;
+      width: 30%;
+      min-width: 180px;
+      justify-content: flex-end;
+    }
+
+    #nowPlayingCover {
+      width: 56px;
+      height: 56px;
+      object-fit: cover;
+      margin-right: 12px;
+    }
+
+    #nowPlayingInfo {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #nowPlayingSong {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    
+    #nowPlayingAuthor {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.9em;
+    }
+
+    .controlBtn {
+      background: none;
+      border: none;
+      color: #b3b3b3;
+      font-size: 16px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .controlBtn:hover {
+      color: white;
+    }
+
+    .controlBtn.primary {
+      font-size: 32px;
+      color: white;
+    }
+
+    #progressBar {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #progress {
+      flex-grow: 1;
+      height: 4px;
+      background-color: #535353;
+      border-radius: 2px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    #progressFill {
+      height: 100%;
+      background-color: #b3b3b3;
+      border-radius: 2px;
+      width: 0%;
+    }
+
+    #progress:hover #progressFill {
+      background-color: #1db954;
+    }
+
+    .timeDisplay {
+      font-size: 12px;
+      color: #b3b3b3;
+      min-width: 40px;
+      text-align: center;
+    }
+
+    #mainAudio {
+      display: none;
+    }
+    
+    .song-item {
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 4px;
+      transition: background-color 0.2s;
+      margin-bottom: 8px;
+      background-color: #282828;
+      display: flex;
+      align-items: center;
+      width: 100%;
+    }
+    
+    .song-item:hover {
+      background-color: #333333;
+    }
+    
+    .song-item img {
+      border-radius: 4px;
+      margin-right: 16px;
+    }
+    
+    .song-item button {
+      margin-left: auto;
+      background-color: transparent;
+      color: #b3b3b3;
+      font-weight: normal;
+      padding: 6px 12px;
+      white-space: nowrap;
+    }
+    
+    .song-item button:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+    
+    .song-author {
+      color: rgba(255, 255, 255, 0.7);
+      margin-left: 8px;
+      font-size: 0.9em;
+    }
+
+    .favorite-btn {
+      background: none;
+      border: none;
+      color: #b3b3b3;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0 10px;
+      margin-left: 10px;
+    }
+    
+    .favorite-btn.active {
+      color: #ff7b00;
+    }
+    
+    .favorites-toggle {
+      margin-top: 10px;
+      background-color: #333;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 30px;
+      border: none;
+      cursor: pointer;
+    }
+    
+    .favorites-toggle.active {
+      background-color: #ff7b00;
+    }
+    
+    #filterSection {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .track-number {
+      width: 30px;
+      color: rgba(255, 255, 255, 0.7);
+      text-align: right;
+      margin-right: 16px;
+    }
+
+    .track-info {
+      flex-grow: 1;
+      min-width: 0; 
+      overflow: hidden;
+      text-overflow: ellipsis; 
+      white-space: nowrap; 
+    }
+
+    .track-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .track-duration {
+      color: rgba(255, 255, 255, 0.7);
+      margin-left: 16px;
+      white-space: nowrap;
+    }
+
+    .view-toggles {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .view-toggle {
+      background-color: transparent;
+      color: rgba(255, 255, 255, 0.7);
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .view-toggle.active {
+      background-color: #333;
+      color: white;
+    }
+    
+    #searchContainer {
+      margin-bottom: 20px;
+      width: 100%;
+    }
+
+    #searchInput {
+      width: 99%;
+      padding: 10px;
+      background-color: #333;
+      border: 1px solid #535353;
+      color: white;
+      border-radius: 4px;
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+
+    #genreFilters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .genre-tag {
+      background-color: #333;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 16px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background-color 0.2s;
+    }
+
+    .genre-tag.active {
+      background-color: #1db954;
+    }
+
+    #filterSection {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 20px;
+    }
+
+    .filter-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .empty-results {
+      text-align: center;
+      padding: 30px;
+      color: rgba(255, 255, 255, 0.7);
+      font-style: italic;
+    }
+    
+    #songsView {
+      width: 100%;
+      overflow: hidden;
+    }
+    
+    .song-actions {
+      display: flex;
+      white-space: nowrap;
+      margin-left: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="topSection">
+    <h1>🎵 Spotify-Style Music Player</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <input type="text" name="name" placeholder="Song name" required>
+      <input type="text" name="author" placeholder="Artist/Author" required>
+      <input type="text" name="genre" placeholder="Genre (optional)">
+      <input type="file" name="audio" accept="audio/*" required>
+      <input type="file" name="cover" accept="image/*" required>
+      <button type="submit">Upload</button>
+    </form>
+  </div>
+
+  <div id="contentWrapper">
+    <div id="bottomSection">
+      <div id="filterSection">
+        <div>
+          <h2>Your Library</h2>
+        </div>
+        <button id="favoritesToggle" class="favorites-toggle">Show Favorites</button>
+      </div>
+      <div id="searchContainer">
+        <input type="text" id="searchInput" placeholder="Search tracks or artists...">
+        <div id="genreFilters"></div>
+      </div>
+      <div id="songsView">
+        <div id="fileList"></div>
+      </div>
+    </div>
+    
+    <div id="largeArtworkSection">
+      <img id="largeArtwork" src="/api/placeholder/350/350" alt="Current song cover">
+      <div id="largeSongName">Song Name</div>
+      <div id="largeArtistName">Artist</div>
+    </div>
+  </div>
+
+  <audio id="mainAudio"></audio>
+
+  <div id="playerBar" class="hidden">
+    <div id="playerLeftSide">
+      <img id="nowPlayingCover" src="/api/placeholder/56/56" alt="Cover">
+      <div id="nowPlayingInfo">
+        <div id="nowPlayingSong">Song Name</div>
+        <div id="nowPlayingAuthor">Artist</div>
+      </div>
+    </div>
+    
+    <div id="playerCenter">
+      <div id="playerControls">
+        <button class="controlBtn" id="prevBtn">⏮️</button>
+        <button class="controlBtn primary" id="playPauseBtn">▶️</button>
+        <button class="controlBtn" id="nextBtn">⏭️</button>
+      </div>
+      <div id="progressBar">
+        <span class="timeDisplay" id="currentTime">0:00</span>
+        <div id="progress">
+          <div id="progressFill"></div>
+        </div>
+        <span class="timeDisplay" id="duration">0:00</span>
+      </div>
+    </div>
+    
+    <div id="playerRightSide">
+    </div>
+  </div>
+  <script src="server.js"></script>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const largeArtworkSection = document.getElementById('largeArtworkSection');
+      const audioElement = document.getElementById('mainAudio');
+      
+      largeArtworkSection.classList.remove('visible');
+      
+      function updateLargeArtwork(coverSrc, songName, artistName) {
+        document.getElementById('largeArtwork').src = coverSrc;
+        document.getElementById('largeSongName').textContent = songName;
+        document.getElementById('largeArtistName').textContent = artistName;
+        
+        largeArtworkSection.classList.add('visible');
+      }
+      
+      function hideLargeArtwork() {
+        largeArtworkSection.classList.remove('visible');
+      }
+      
+      const songItems = document.querySelectorAll('.song-item');
+      songItems.forEach(item => {
+        item.addEventListener('click', function() {
+          const coverSrc = this.querySelector('img').src;
+          const songName = this.querySelector('.track-title').textContent;
+          const artistName = this.querySelector('.song-author').textContent;
+          updateLargeArtwork(coverSrc, songName, artistName);
+        });
+      });
+      
+      audioElement.addEventListener('ended', hideLargeArtwork);
+      
+      const playPauseBtn = document.getElementById('playPauseBtn');
+      if (playPauseBtn) {
+        playPauseBtn.addEventListener('click', function() {
+          if (audioElement.paused && audioElement.currentTime === 0) {
+            hideLargeArtwork();
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
