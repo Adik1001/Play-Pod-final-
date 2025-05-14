@@ -1,4 +1,3 @@
-// Toggle favorites view
 
 const DB_NAME = 'audioPlayerDB';
 const DB_VERSION = 1;
@@ -8,11 +7,9 @@ async function toggleFavoritesView() {
   const isFavoritesMode = showFavoritesBtn.classList.toggle('active');
 
   if (isFavoritesMode) {
-    // Show only favorites
     showFavoritesBtn.textContent = 'Show All';
     await loadFavorites();
   } else {
-    // Show all songs
     showFavoritesBtn.textContent = 'Show Favorites';
     await loadFiles();
   }
@@ -24,21 +21,17 @@ async function toggleFavorite(audioFilename) {
     const transaction = db.transaction(['favorites'], 'readwrite');
     const store = transaction.objectStore('favorites');
 
-    // Check if already in favorites
     const getRequest = store.get(audioFilename);
 
     getRequest.onsuccess = async (event) => {
       const isFavorite = !!event.target.result;
       
       if (isFavorite) {
-        // Remove from favorites
         store.delete(audioFilename);
       } else {
-        // Add to favorites
         store.add({ audio: audioFilename });
       }
 
-      // Update UI immediately without waiting for transaction to complete
       const favoriteBtn = document.querySelector(`.song-item button.favorite-btn[data-audio="${audioFilename}"]`);
       if (favoriteBtn) {
         favoriteBtn.innerHTML = isFavorite ? '☆' : '★';
@@ -46,7 +39,6 @@ async function toggleFavorite(audioFilename) {
       }
 
       transaction.oncomplete = async () => {
-        // Reload favorites or all files based on the current view
         const showFavoritesBtn = document.getElementById('showFavoritesBtn');
         if (showFavoritesBtn && showFavoritesBtn.classList.contains('active')) {
           await loadFavorites();
@@ -60,16 +52,13 @@ async function toggleFavorite(audioFilename) {
   }
 }
 
-// Load favorites from IndexedDB
 async function loadFavorites() {
   const container = document.getElementById('fileList');
   if (!container) return;
 
-  // Clear existing list
   container.innerHTML = '';
 
   try {
-    // Get favorites from IndexedDB
     const favorites = await getAllEntries('favorites');
     
     if (favorites.length === 0) {
@@ -77,10 +66,8 @@ async function loadFavorites() {
       return;
     }
 
-    // Get all metadata entries
     const allEntries = await getAllEntries('metadata');
     
-    // Filter songs that are in favorites
     const favoriteSongs = allEntries.filter(entry => 
       favorites.some(fav => fav.audio === entry.audio)
     );
@@ -90,10 +77,8 @@ async function loadFavorites() {
       return;
     }
 
-    // Prepare data for rendering
     window.songs = favoriteSongs;
     
-    // Render songs
     renderSongs(favoriteSongs);
   } catch (error) {
     console.error('Error loading favorites:', error);
@@ -101,23 +86,19 @@ async function loadFavorites() {
   }
 }
 
-// Load and display files from IndexedDB
 async function loadFiles() {
   const container = document.getElementById('fileList');
   if (!container) return;
 
-  // Clear existing list
   container.innerHTML = '';
 
   try {
-    // Get entries from IndexedDB
     const entries = await getAllEntries('metadata');
 
-    // Avoid duplicate rendering by using a Set
     const renderedFiles = new Set();
     const uniqueEntries = entries.filter(entry => {
       if (renderedFiles.has(entry.audio)) {
-        return false; // Skip duplicates
+        return false; 
       }
       renderedFiles.add(entry.audio);
       return true;
@@ -128,11 +109,9 @@ async function loadFiles() {
       return;
     }
 
-    // Prepare data for rendering
     window.allSongsData = uniqueEntries;
     window.songs = uniqueEntries;
 
-    // Render songs
     renderSongs(uniqueEntries);
   } catch (error) {
     console.error('Error loading files:', error);
@@ -144,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadFiles();
     loadGenres();
     
-    // Fix for the albumsViewBtn click event
     const songsViewBtn = document.getElementById('songsViewBtn');
     const albumsViewBtn = document.getElementById('albumsViewBtn');
     
@@ -162,7 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
         albumsViewBtn.classList.remove('active');
       });
       
-      // The key fix - use our new function for the album tab
       albumsViewBtn.addEventListener('click', () => {
         initializeAlbumsView();
         songsViewBtn.classList.remove('active');
@@ -170,7 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    // Back button for album detail view
     const backToAlbumsBtn = document.getElementById('backToAlbumsBtn');
     if (backToAlbumsBtn) {
       backToAlbumsBtn.addEventListener('click', () => {
@@ -179,14 +155,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    // Add other event listeners...
-    // (rest of your existing initialization code)
   });
 });
 
-// Database variables
-
-// Initialize IndexedDB
 function initDatabase() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -205,7 +176,6 @@ function initDatabase() {
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
       
-      // Create object stores
       if (!db.objectStoreNames.contains('audioFiles')) {
         const audioStore = db.createObjectStore('audioFiles', { keyPath: 'filename' });
       }
@@ -231,13 +201,10 @@ function initDatabase() {
   });
 }
 
-// Handle form submission
-// Handle form submission for uploading songs
 document.getElementById('uploadForm').onsubmit = async (e) => {
   e.preventDefault();
   const form = e.target;
 
-  // Get form data
   const name = form.querySelector('[name="name"]').value.trim();
   const author = form.querySelector('[name="author"]').value.trim();
   const genre = form.querySelector('[name="genre"]').value.trim();
@@ -250,19 +217,15 @@ document.getElementById('uploadForm').onsubmit = async (e) => {
   }
 
   try {
-    // Convert files to Base64
     const audioBase64 = await fileToBase64(audioFile);
     const coverBase64 = await fileToBase64(coverFile);
 
-    // Generate unique filenames
     const audioFilename = Date.now() + '-audio' + getExtension(audioFile.name);
     const coverFilename = Date.now() + '-cover' + getExtension(coverFile.name);
 
-    // Store files in IndexedDB
     await storeFile('audioFiles', { filename: audioFilename, data: audioBase64 });
     await storeFile('coverFiles', { filename: coverFilename, data: coverBase64 });
 
-    // Store metadata in IndexedDB
     await storeMetadata({
       name,
       author,
@@ -272,7 +235,6 @@ document.getElementById('uploadForm').onsubmit = async (e) => {
       dateAdded: new Date().toISOString(),
     });
 
-    // Reset form and reload the file list
     form.reset();
     await loadFiles();
     alert('Song uploaded successfully!');
@@ -282,12 +244,10 @@ document.getElementById('uploadForm').onsubmit = async (e) => {
   }
 };
 
-// Get file extension
 function getExtension(filename) {
   return '.' + filename.split('.').pop();
 }
 
-// Convert file to base64
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -297,7 +257,6 @@ function fileToBase64(file) {
   });
 }
 
-// Store file in IndexedDB
 function storeFile(storeName, fileObj) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([storeName], 'readwrite');
@@ -309,7 +268,6 @@ function storeFile(storeName, fileObj) {
   });
 }
 
-// Store metadata in IndexedDB
 function storeMetadata(entry) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(['metadata'], 'readwrite');
@@ -321,7 +279,6 @@ function storeMetadata(entry) {
   });
 }
 
-// Get all entries from object store
 function getAllEntries(storeName) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([storeName], 'readonly');
@@ -333,7 +290,6 @@ function getAllEntries(storeName) {
   });
 }
 
-// Get file from IndexedDB
 function getFile(storeName, filename) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([storeName], 'readonly');
@@ -345,13 +301,12 @@ function getFile(storeName, filename) {
   });
 }
 
-// Custom function to render songs
 async function renderSongs(songsToRender) {
   const container = document.getElementById('fileList');
   const favorites = await getAllEntries('favorites');
   const favoriteIds = favorites.map(fav => fav.audio);
 
-  container.innerHTML = ''; // Clear container first
+  container.innerHTML = ''; 
 
   if (songsToRender.length === 0) {
     container.innerHTML = '<p>No songs found.</p>';
@@ -359,7 +314,6 @@ async function renderSongs(songsToRender) {
   }
 
   for (const song of songsToRender) {
-    // Get cover file from IndexedDB
     const coverFile = await getFile('coverFiles', song.cover);
     if (!coverFile) continue;
 
@@ -385,7 +339,7 @@ async function renderSongs(songsToRender) {
     const isFavorite = favoriteIds.includes(song.audio);
     favBtn.innerHTML = isFavorite ? '★' : '☆';
     favBtn.classList.toggle('active', isFavorite);
-    favBtn.dataset.audio = song.audio; // Add data attribute to easier find button
+    favBtn.dataset.audio = song.audio; 
     favBtn.onclick = (e) => {
       e.stopPropagation();
       toggleFavorite(song.audio);
@@ -405,7 +359,6 @@ async function renderSongs(songsToRender) {
 }
 
 
-// Play song
 async function playSong(index) {
   const mainAudio = document.getElementById('mainAudio');
   const playPauseBtn = document.getElementById('playPauseBtn');
@@ -421,8 +374,6 @@ async function playSong(index) {
   if (index >= 0 && index < songs.length) {
     window.currentSongIndex = index;
     const song = songs[index];
-    
-    // Get audio and cover from IndexedDB
     const audioFile = await getFile('audioFiles', song.audio);
     const coverFile = await getFile('coverFiles', song.cover);
     
@@ -446,7 +397,6 @@ async function playSong(index) {
   }
 }
 
-// Toggle play/pause
 function togglePlayPause() {
   const mainAudio = document.getElementById('mainAudio');
   const playPauseBtn = document.getElementById('playPauseBtn');
@@ -460,7 +410,6 @@ function togglePlayPause() {
   }
 }
 
-// Play next song
 function playNextSong() {
   if (!window.songs || window.songs.length === 0) return;
   
@@ -468,7 +417,6 @@ function playNextSong() {
   playSong(nextIndex);
 }
 
-// Play previous song
 function playPrevSong() {
   if (!window.songs || window.songs.length === 0) return;
   
@@ -477,26 +425,20 @@ function playPrevSong() {
   playSong(prevIndex);
 }
 
-// Delete audio
 
 async function deleteAudio(id, audioFilename, coverFilename) {
   if (confirm('Are you sure you want to delete this audio?')) {
     try {
-      // Delete files from IndexedDB
       await deleteEntry('audioFiles', audioFilename);
       await deleteEntry('coverFiles', coverFilename);
       
-      // Delete metadata
       await deleteEntry('metadata', id);
       
-      // Delete from favorites if exists
       try {
         await deleteEntry('favorites', audioFilename);
       } catch (error) {
-        // Ignore if not in favorites
       }
       
-      // Handle currently playing song
       const mainAudio = document.getElementById('mainAudio');
       const playerBar = document.getElementById('playerBar');
       const largeArtworkSection = document.getElementById('largeArtworkSection');
@@ -511,7 +453,6 @@ async function deleteAudio(id, audioFilename, coverFilename) {
         window.currentSongIndex = -1;
       }
       
-      // Reload the file list based on current view
       const showFavoritesBtn = document.getElementById('showFavoritesBtn');
       if (showFavoritesBtn && showFavoritesBtn.classList.contains('active')) {
         await loadFavorites();
@@ -526,7 +467,6 @@ async function deleteAudio(id, audioFilename, coverFilename) {
 }
 
 
-// Delete entry from object store
 function deleteEntry(storeName, key) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([storeName], 'readwrite');
@@ -538,15 +478,11 @@ function deleteEntry(storeName, key) {
   });
 }
 
-// Toggle favorite
-
-// Helper function to get storage usage statistics
 async function displayStorageStats() {
   try {
     const audioFiles = await getAllEntries('audioFiles');
     const coverFiles = await getAllEntries('coverFiles');
     
-    // Estimate size (very approximate since base64 encoding is larger than binary)
     let totalSize = 0;
     
     audioFiles.forEach(file => {
@@ -557,7 +493,6 @@ async function displayStorageStats() {
       totalSize += file.data.length;
     });
     
-    // Convert to MB (approximation)
     const totalMB = (totalSize * 2) / 1024 / 1024;
     
     console.log(`Storage stats: ${audioFiles.length} audio files, using approximately ${totalMB.toFixed(2)}MB of storage`);
@@ -572,7 +507,6 @@ async function displayStorageStats() {
   }
 }
 
-// Get all genres for filters
 async function loadGenres() {
   const genreFilters = document.getElementById('genreFilters');
   if (!genreFilters) return;
@@ -600,7 +534,6 @@ async function loadGenres() {
   }
 }
 
-// Toggle genre filter
 function toggleGenreFilter(genre, element) {
   element.classList.toggle('active');
   
@@ -610,22 +543,18 @@ function toggleGenreFilter(genre, element) {
   filterSongs(activeGenres);
 }
 
-// Filter songs based on search term and genres
 async function filterSongs(activeGenres = []) {
   const searchTerm = window.searchTerm || '';
   
-  // Get the appropriate base songs depending on favorites mode
   const showFavoritesBtn = document.getElementById('showFavoritesBtn');
   const isFavoritesMode = showFavoritesBtn && showFavoritesBtn.classList.contains('active');
   
   let baseSongs = [];
   
   if (isFavoritesMode) {
-    // Get favorites from IndexedDB
     const favorites = await getAllEntries('favorites');
     const allSongs = window.allSongsData || [];
     
-    // Filter songs that are in favorites
     baseSongs = allSongs.filter(entry => 
       favorites.some(fav => fav.audio === entry.audio)
     );
@@ -635,7 +564,6 @@ async function filterSongs(activeGenres = []) {
   
   let filteredSongs = baseSongs;
   
-  // Filter by search term
   if (searchTerm) {
     const term = searchTerm.toLowerCase();
     filteredSongs = filteredSongs.filter(song => 
@@ -644,7 +572,6 @@ async function filterSongs(activeGenres = []) {
     );
   }
   
-  // Filter by genres
   if (activeGenres.length > 0) {
     filteredSongs = filteredSongs.filter(song => 
       song.genre && activeGenres.includes(song.genre)
@@ -653,7 +580,6 @@ async function filterSongs(activeGenres = []) {
   
   window.songs = filteredSongs;
   
-  // Re-render songs
   const container = document.getElementById('fileList');
   container.innerHTML = '';
   
@@ -666,7 +592,6 @@ async function filterSongs(activeGenres = []) {
 }
 
 
-// Album support
 async function loadAlbums() {
   const albumGrid = document.getElementById('albumGrid');
   if (!albumGrid) return;
@@ -674,7 +599,6 @@ async function loadAlbums() {
   albumGrid.innerHTML = '';
 
   try {
-    // Get albums from IndexedDB
     const albums = await getAllEntries('albums');
 
     if (albums.length === 0) {
@@ -686,7 +610,6 @@ async function loadAlbums() {
       const albumElement = document.createElement('div');
       albumElement.className = 'album-item';
 
-      // Get cover from IndexedDB
       let coverData = null;
       if (album.cover) {
         const coverFile = await getFile('coverFiles', album.cover);
@@ -713,11 +636,7 @@ async function loadAlbums() {
   }
 }
 
-// Show album detail
 async function showAlbumDetail(album) {
-  // Your existing code...
-  
-  // Fix this part - replace albumDetailSongs with albumTracks
   const albumTracks = document.getElementById('albumTracks');
   albumTracks.innerHTML = '';
   
@@ -728,11 +647,10 @@ async function showAlbumDetail(album) {
     if (albumSongs.length === 0) {
       albumTracks.innerHTML = '<p>No songs in this album.</p>';
     } else {
-      // Render album songs
       let index = 0;
       for (const song of albumSongs) {
         const songElement = document.createElement('div');
-        songElement.className = 'album-track'; // Changed from album-song-item to match CSS
+        songElement.className = 'album-track';
         
         songElement.innerHTML = `
           <div class="track-number">${++index}</div>
@@ -743,7 +661,6 @@ async function showAlbumDetail(album) {
         `;
         
         songElement.addEventListener('click', () => {
-          // Play song
           window.songs = albumSongs;
           playSong(albumSongs.indexOf(song));
         });
@@ -752,7 +669,6 @@ async function showAlbumDetail(album) {
       }
     }
     
-    // Show album detail view
     document.getElementById('songsView').style.display = 'none';
     document.getElementById('albumsView').style.display = 'none';
     document.getElementById('albumDetailView').style.display = 'block';
@@ -761,7 +677,6 @@ async function showAlbumDetail(album) {
   }
 }
 
-// Show create album dialog
 function showCreateAlbumDialog() {
   console.log('showCreateAlbumDialog function called');
   
@@ -786,16 +701,12 @@ function showCreateAlbumDialog() {
   modal.style.maxHeight = '80vh';
   modal.style.overflow = 'auto';
 
-  // Add to DOM before fetching songs to ensure we can see it's working
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   
-  // Show loading indicator
   modal.innerHTML = '<p>Loading songs...</p>';
 
-  // Get all songs for selection
   getAllEntries('metadata').then(allSongs => {
-    // Store in a global variable for reference
     window.allSongsData = allSongs;
 
     modal.innerHTML = `
@@ -829,7 +740,6 @@ function showCreateAlbumDialog() {
       </div>
     `;
 
-    // Now bind events to the elements after they've been added to the DOM
     document.getElementById('cancelAlbumBtn').addEventListener('click', () => {
       document.body.removeChild(overlay);
     });
@@ -850,16 +760,12 @@ function showCreateAlbumDialog() {
       }
 
       try {
-        // Convert cover image to Base64
         const albumCoverBase64 = await fileToBase64(albumCoverFile);
 
-        // Generate unique filename for the cover
         const albumCoverFilename = Date.now() + '-album-cover' + getExtension(albumCoverFile.name);
 
-        // Store the cover image in IndexedDB
         await storeFile('coverFiles', { filename: albumCoverFilename, data: albumCoverBase64 });
 
-        // Create album metadata
         const album = {
           name: albumName,
           artist: albumArtist,
@@ -868,7 +774,6 @@ function showCreateAlbumDialog() {
           dateCreated: new Date().toISOString(),
         };
 
-        // Store the album in IndexedDB
         const transaction = db.transaction(['albums'], 'readwrite');
         const store = transaction.objectStore('albums');
         const request = store.add(album);
@@ -892,7 +797,6 @@ function showCreateAlbumDialog() {
     console.error('Error loading songs for album creation:', error);
     modal.innerHTML = '<p>Error loading songs. Please try again.</p>';
     
-    // Add a close button
     const closeBtn = document.createElement('button');
     closeBtn.textContent = 'Close';
     closeBtn.style.marginTop = '16px';
@@ -911,7 +815,6 @@ function showCreateAlbumDialog() {
 
 
 
-// Get entry by index
 function getEntryByIndex(storeName, indexName, key) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([storeName], 'readonly');
@@ -924,21 +827,18 @@ function getEntryByIndex(storeName, indexName, key) {
   });
 }
 
-// Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   initDatabase().then(() => {
     loadFiles();
     loadGenres();
     const albumsViewBtn = document.getElementById('albumsViewBtn');
   if (albumsViewBtn) {
-    // Replace any existing listeners
     albumsViewBtn.onclick = function() {
       console.log('Albums view button clicked');
       initializeAlbumsView();
     };
   }
 
-    // Add event listeners for search
     const searchInput = document.getElementById('searchInput');
     if (searchInput) {
       searchInput.addEventListener('input', (e) => {
@@ -947,14 +847,12 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    // Add audio player controls
     const playPauseBtn = document.getElementById('playPauseBtn');
     const mainAudio = document.getElementById('mainAudio');
     
     if (playPauseBtn && mainAudio) {
       playPauseBtn.addEventListener('click', togglePlayPause);
       
-      // Update play/pause button based on audio state
       mainAudio.addEventListener('play', () => {
         playPauseBtn.textContent = '⏸️';
       });
@@ -964,7 +862,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    // Previous and next buttons
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     
@@ -976,13 +873,11 @@ document.addEventListener('DOMContentLoaded', () => {
       nextBtn.addEventListener('click', playNextSong);
     }
     
-    // Favorites button
     const showFavoritesBtn = document.getElementById('showFavoritesBtn');
     if (showFavoritesBtn) {
       showFavoritesBtn.addEventListener('click', toggleFavoritesView);
     }
     
-    // Album view toggle buttons
     const songsViewBtn = document.getElementById('songsViewBtn');
     
     if (songsViewBtn && albumsViewBtn) {
@@ -1004,7 +899,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    // Back button for album detail view
     const albumDetailBackBtn = document.getElementById('albumDetailBackBtn');
     if (albumDetailBackBtn) {
       albumDetailBackBtn.addEventListener('click', () => {
@@ -1017,9 +911,6 @@ document.addEventListener('DOMContentLoaded', () => {
 const albumsViewBtn = document.getElementById('albumsViewBtn');
 if (albumsViewBtn) {
   albumsViewBtn.addEventListener('click', () => {
-    // Your existing code...
-    
-    // Add this: Create "Create Album" button
     const albumGrid = document.getElementById('albumGrid');
     if (albumGrid && !document.getElementById('createAlbumBtn')) {
       const createBtn = document.createElement('button');
@@ -1034,15 +925,12 @@ if (albumsViewBtn) {
 
 
   function initializeAlbumsView() {
-  // Switch to albums view
   document.getElementById('songsView').style.display = 'none';
   document.getElementById('albumsView').style.display = 'block';
   document.getElementById('albumDetailView').style.display = 'none';
   
-  // Add "Create Album" button if it doesn't exist
   const albumGrid = document.getElementById('albumGrid');
   if (albumGrid) {
-    // First remove any existing button to avoid duplicates
     const existingBtn = document.getElementById('createAlbumBtn');
     if (existingBtn) {
       existingBtn.remove();
@@ -1060,17 +948,14 @@ if (albumsViewBtn) {
     createBtn.style.cursor = 'pointer';
     createBtn.style.fontWeight = 'bold';
     
-    // Direct inline function to avoid reference issues
     createBtn.onclick = function() {
       console.log('Create Album button clicked');
       showCreateAlbumDialog();
     };
     
-    // Insert before album grid
     albumGrid.parentNode.insertBefore(createBtn, albumGrid);
   }
   
-  // Load the albums
   loadAlbums();
 }
 
@@ -1101,11 +986,7 @@ function updateProgress() {
 
 
 
-    // Album views and filters - adapted for IndexedDB
-
-// Initialize albums view with proper event handlers
 function initializeAlbumsView() {
-  // Switch to albums view
   document.getElementById('songsView').style.display = 'none';
   document.getElementById('albumsView').style.display = 'block';
   document.getElementById('albumDetailView').style.display = 'none';
@@ -1118,10 +999,8 @@ function initializeAlbumsView() {
     albumsViewBtn.classList.add('active');
   }
   
-  // Add "Create Album" button if it doesn't exist
   const albumGrid = document.getElementById('albumGrid');
   if (albumGrid) {
-    // First remove any existing button to avoid duplicates
     const existingBtn = document.getElementById('createAlbumBtn');
     if (existingBtn) {
       existingBtn.remove();
@@ -1139,21 +1018,17 @@ function initializeAlbumsView() {
     createBtn.style.cursor = 'pointer';
     createBtn.style.fontWeight = 'bold';
     
-    // Direct inline function to avoid reference issues
     createBtn.onclick = function() {
       console.log('Create Album button clicked');
       showCreateAlbumDialog();
     };
     
-    // Insert before album grid
     albumGrid.parentNode.insertBefore(createBtn, albumGrid);
   }
   
-  // Load the albums
   loadAlbums();
 }
 
-// Updated function to filter album tracks 
 function filterAlbumTracks(currentAlbum, searchTerm = '', activeGenres = []) {
   if (!currentAlbum) return;
   
@@ -1163,16 +1038,13 @@ function filterAlbumTracks(currentAlbum, searchTerm = '', activeGenres = []) {
   const searchLower = searchTerm.toLowerCase();
   albumTracks.innerHTML = '';
   
-  // Get all songs from the database
   getAllEntries('metadata').then(allSongs => {
-    // Filter songs that are in the current album
     const albumSongs = currentAlbum.tracks
       .map(trackId => {
         return allSongs.find(song => song.audio === trackId);
       })
       .filter(song => song); 
     
-    // Apply search and genre filters
     const filteredAlbumSongs = albumSongs.filter(song => {
       const matchesSearch = 
         song.name.toLowerCase().includes(searchLower) || 
@@ -1190,7 +1062,6 @@ function filterAlbumTracks(currentAlbum, searchTerm = '', activeGenres = []) {
       return;
     }
     
-    // Render the filtered tracks
     filteredAlbumSongs.forEach((song, index) => {
       const trackElement = document.createElement('div');
       trackElement.className = 'album-track';
@@ -1205,7 +1076,6 @@ function filterAlbumTracks(currentAlbum, searchTerm = '', activeGenres = []) {
       `;
       
       trackElement.addEventListener('click', () => {
-        // Set the songs array to filtered album songs for proper playback context
         window.songs = filteredAlbumSongs;
         playSong(index);
       });
@@ -1218,22 +1088,18 @@ function filterAlbumTracks(currentAlbum, searchTerm = '', activeGenres = []) {
   });
 }
 
-// Updated function to show album detail
 async function showAlbumDetail(album) {
-  // Store current album in window for reference
   window.currentAlbum = album;
   
   document.getElementById('songsView').style.display = 'none';
   document.getElementById('albumsView').style.display = 'none';
   document.getElementById('albumDetailView').style.display = 'block';
   
-  // Update album cover and metadata
   const albumCover = document.getElementById('albumCover');
   const albumTitle = document.getElementById('albumTitle');
   const albumArtist = document.getElementById('albumArtist');
   
   if (albumCover && albumTitle && albumArtist) {
-    // Get cover from IndexedDB
     if (album.cover) {
       try {
         const coverFile = await getFile('coverFiles', album.cover);
@@ -1254,7 +1120,6 @@ async function showAlbumDetail(album) {
     albumArtist.textContent = album.artist || 'Various Artists';
   }
   
-  // Filter tracks based on current search and genre filters
   const searchTerm = window.searchTerm || '';
   const activeGenres = Array.from(document.querySelectorAll('.genre-tag.active'))
     .map(el => el.textContent);
@@ -1262,22 +1127,18 @@ async function showAlbumDetail(album) {
   filterAlbumTracks(album, searchTerm, activeGenres);
 }
 
-// Connect search input to album track filtering
 function setupSearchForAlbums() {
   const searchInput = document.getElementById('searchInput');
   if (searchInput) {
-    // Update or add event listener
     const oldListener = searchInput.onchange || searchInput.oninput;
     
     searchInput.addEventListener('input', (e) => {
       window.searchTerm = e.target.value;
       
-      // Call original listener if exists
       if (typeof oldListener === 'function') {
         oldListener.call(searchInput, e);
       }
       
-      // Also filter album tracks if in album detail view
       const albumDetailView = document.getElementById('albumDetailView');
       if (albumDetailView && albumDetailView.style.display !== 'none' && window.currentAlbum) {
         const activeGenres = Array.from(document.querySelectorAll('.genre-tag.active'))
@@ -1288,11 +1149,9 @@ function setupSearchForAlbums() {
   }
 }
 
-// Connect genre filters to album track filtering
 function setupGenreFiltersForAlbums() {
   document.addEventListener('click', (e) => {
     if (e.target.classList.contains('genre-tag')) {
-      // If we're in album detail view, refilter tracks
       const albumDetailView = document.getElementById('albumDetailView');
       if (albumDetailView && albumDetailView.style.display !== 'none' && window.currentAlbum) {
         const searchTerm = window.searchTerm || '';
@@ -1304,12 +1163,8 @@ function setupGenreFiltersForAlbums() {
   });
 }
 
-// Initialize the albums functionality
 document.addEventListener('DOMContentLoaded', () => {
   initDatabase().then(() => {
-    // Rest of your initialization code
-    
-    // Add navigation between views
     const songsViewBtn = document.getElementById('songsViewBtn');
     const albumsViewBtn = document.getElementById('albumsViewBtn');
 const backToAlbumsBtn = document.getElementById('backToAlbumsBtn');
@@ -1334,7 +1189,6 @@ const backToAlbumsBtn = document.getElementById('backToAlbumsBtn');
     document.getElementById('albumsView').style.display = 'block';
   });
 }
-    // Setup search and filters to work with albums
     setupSearchForAlbums();
     setupGenreFiltersForAlbums();
   });
